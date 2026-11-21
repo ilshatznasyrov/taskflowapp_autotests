@@ -25,8 +25,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          # Устанавливаем только Chromium для скорости и стабильности в CI
-          playwright install chromium --with-deps 
+          playwright install chromium --with-deps
 
       - name: Create .env file from Secrets
         run: |
@@ -44,35 +43,28 @@ jobs:
           echo "DEMO_PASSWORD=${{ secrets.DEMO_PASSWORD }}" >> .env
           echo "USER_EMAIL=${{ secrets.USER_EMAIL }}" >> .env
           echo "USER_PASSWORD=${{ secrets.USER_PASSWORD }}" >> .env
-          cat .env # Выводим в лог для проверки (секреты будут замаскированы звездочками ***)
 
-      - name: Run Playwright tests with pytest and generate Allure results
+      - name: Run tests (parallel + sequential)
         run: |
-          # 1. Параллельный запуск всех тестов, кроме тех, что проверяют глобальные счетчики
           pytest -n auto -m "not not_parallel" --alluredir=./allure-results
-          # 2. Последовательный запуск тестов со счетчиками
           pytest -m "not_parallel" --alluredir=./allure-results
 
-      - name: Get Allure history
-        uses: actions/checkout@v4
-        if: always()
-        continue-on-error: true
+      - name: Set up Node.js for Allure CLI
+        uses: actions/setup-node@v4
         with:
-          ref: gh-pages
-          path: gh-pages
+          node-version: '20'
 
-      - name: Allure Report action
-        uses: simple-elf/allure-report-action@v1.7
+      - name: Install Allure CLI
+        run: npm install -g allure-commandline --silent
+
+      - name: Generate Allure report
         if: always()
-        with:
-          allure_results: allure-results
-          allure_history: allure-history
-          keep_reports: 20
+        run: allure generate allure-results -o allure-report --clean
 
-      - name: Deploy report to Github Pages
+      - name: Deploy report to GitHub Pages
+        if: always()
         uses: peaceiris/actions-gh-pages@v4
-        if: always()
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
-          publish_dir: allure-history
+          publish_dir: ./allure-report
