@@ -1,0 +1,9 @@
+.idea/
+.env
+.venv/
+__pycache__/
+allure-results/
+allure-report/
+videos/
+tracing/
+browser-state.json
