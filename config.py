@@ -1,6 +1,6 @@
 from pathlib import Path
 from enum import Enum
-from pydantic import BaseModel, EmailStr, HttpUrl, Field, DirectoryPath, SecretStr
+from pydantic import BaseModel, EmailStr, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -50,7 +50,7 @@ class Settings(BaseSettings):
     # пути
     videos_dir: Path = Path("videos")
     tracing_dir: Path = Path("tracing")
-    allure_results_dir: DirectoryPath = DirectoryPath("./allure-results")
+    allure_results_dir: Path = Path("allure-results")
     browser_state_file: Path = Path("browser-state.json")
 
     def setup_directories(self) -> None:

@@ -44,8 +44,9 @@ jobs:
           echo "USER_EMAIL=${{ secrets.USER_EMAIL }}" >> .env
           echo "USER_PASSWORD=${{ secrets.USER_PASSWORD }}" >> .env
 
-      - name: Run tests (parallel + sequential)
+      - name: Run tests
         run: |
+          mkdir -p allure-results videos tracing
           pytest -n auto -m "not not_parallel" --alluredir=./allure-results
           pytest -m "not_parallel" --alluredir=./allure-results
 
