@@ -1,0 +1,78 @@
+name: UI Tests
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  run-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          # Устанавливаем только Chromium для скорости и стабильности в CI
+          playwright install chromium --with-deps 
+
+      - name: Create .env file from Secrets
+        run: |
+          echo "APP_URL=${{ secrets.APP_URL }}" >> .env
+          echo "HEADLESS=true" >> .env
+          echo 'BROWSERS=["chromium"]' >> .env
+          echo 'TEST_USER.EMAIL="${{ secrets.TEST_USER_EMAIL }}"' >> .env
+          echo 'TEST_USER.USERNAME="${{ secrets.TEST_USER_USERNAME }}"' >> .env
+          echo 'TEST_USER.PASSWORD="${{ secrets.TEST_USER_PASSWORD }}"' >> .env
+          echo "SUPABASE_URL=${{ secrets.SUPABASE_URL }}" >> .env
+          echo "SUPABASE_SERVICE_KEY=${{ secrets.SUPABASE_SERVICE_KEY }}" >> .env
+          echo "ADMIN_EMAIL=${{ secrets.ADMIN_EMAIL }}" >> .env
+          echo "ADMIN_PASSWORD=${{ secrets.ADMIN_PASSWORD }}" >> .env
+          echo "DEMO_EMAIL=${{ secrets.DEMO_EMAIL }}" >> .env
+          echo "DEMO_PASSWORD=${{ secrets.DEMO_PASSWORD }}" >> .env
+          echo "USER_EMAIL=${{ secrets.USER_EMAIL }}" >> .env
+          echo "USER_PASSWORD=${{ secrets.USER_PASSWORD }}" >> .env
+          cat .env # Выводим в лог для проверки (секреты будут замаскированы звездочками ***)
+
+      - name: Run Playwright tests with pytest and generate Allure results
+        run: |
+          # 1. Параллельный запуск всех тестов, кроме тех, что проверяют глобальные счетчики
+          pytest -n auto -m "not not_parallel" --alluredir=./allure-results
+          # 2. Последовательный запуск тестов со счетчиками
+          pytest -m "not_parallel" --alluredir=./allure-results
+
+      - name: Get Allure history
+        uses: actions/checkout@v4
+        if: always()
+        continue-on-error: true
+        with:
+          ref: gh-pages
+          path: gh-pages
+
+      - name: Allure Report action
+        uses: simple-elf/allure-report-action@v1.7
+        if: always()
+        with:
+          allure_results: allure-results
+          allure_history: allure-history
+          keep_reports: 20
+
+      - name: Deploy report to Github Pages
+        uses: peaceiris/actions-gh-pages@v4
+        if: always()
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: allure-history
